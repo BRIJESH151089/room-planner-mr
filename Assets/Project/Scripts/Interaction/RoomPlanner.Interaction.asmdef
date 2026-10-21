@@ -1,0 +1,16 @@
+{
+    "name": "RoomPlanner.Interaction",
+    "rootNamespace": "RoomPlanner.Interaction",
+    "references": [
+        "RoomPlanner.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
