@@ -53,3 +53,10 @@ crashlytics-build.properties
 /.mcp.json
 CLAUDE.md
 Assets/Resources/DevAgentSettings*
+
+# Android/Gradle build temp
+/.utmp/
+
+# Meta build config (generated at build time, can hold local SDK paths)
+/Assets/Resources/OVRBuildConfig.asset
+/Assets/Resources/OVRBuildConfig.asset.meta
