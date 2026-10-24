@@ -2,7 +2,9 @@
     "name": "RoomPlanner.Room",
     "rootNamespace": "RoomPlanner.Room",
     "references": [
-        "RoomPlanner.Core"
+        "RoomPlanner.Core",
+        "meta.xr.mrutilitykit",
+        "Oculus.VR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
