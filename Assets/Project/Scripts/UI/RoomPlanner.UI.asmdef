@@ -2,7 +2,8 @@
     "name": "RoomPlanner.UI",
     "rootNamespace": "RoomPlanner.UI",
     "references": [
-        "RoomPlanner.Core"
+        "RoomPlanner.Core",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
