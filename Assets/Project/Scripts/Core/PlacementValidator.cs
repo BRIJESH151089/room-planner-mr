@@ -1,39 +1,99 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RoomPlanner.Core
 {
     public static class PlacementValidator
     {
+        // Gap kept between furniture and walls, in metres.
+        public const float WallMargin = 0.05f;
+
         // position and itemSize are in the room's horizontal (x, z) plane; position is the item's center.
-        // The item is an axis-aligned rectangle (rotation is not supported yet). It fits when all four of its
-        // corners are inside the room with the margin, and no room corner pokes into it (this catches the
-        // inner corner of an L-shaped room, where all four item corners can be inside but the item is not).
+        // The item is an axis-aligned rectangle (yaw 0).
         public static bool IsWithinRoom(RoomFootprint room, Vector2 position, Vector2 itemSize, float margin)
         {
-            float halfWidth = itemSize.x / 2f;
-            float halfDepth = itemSize.y / 2f;
+            return CheckRoom(room, new OrientedRect(position, itemSize.x, itemSize.y, 0f), margin) == PlacementReason.Valid;
+        }
 
-            float minX = position.x - halfWidth;
-            float maxX = position.x + halfWidth;
-            float minZ = position.y - halfDepth;
-            float maxZ = position.y + halfDepth;
-
-            if (!room.Contains(minX, minZ, margin) || !room.Contains(maxX, minZ, margin)
-                || !room.Contains(minX, maxZ, margin) || !room.Contains(maxX, maxZ, margin))
+        // Checks a candidate against the room and the items already placed, in that order:
+        // OutsideRoom wins over TooCloseToWall, which wins over OverlapsItem. Does not allocate.
+        public static PlacementResult Validate(RoomFootprint room, in PlacedItem candidate, IReadOnlyList<PlacedItem> placedItems, float margin)
+        {
+            if (placedItems == null)
             {
-                return false;
+                throw new ArgumentNullException(nameof(placedItems));
             }
 
-            foreach (Vector2 corner in room.Corners)
+            OrientedRect footprint = candidate.Footprint;
+            PlacementReason roomCheck = CheckRoom(room, footprint, margin);
+            if (roomCheck != PlacementReason.Valid)
             {
-                if (corner.x > minX - margin && corner.x < maxX + margin
-                    && corner.y > minZ - margin && corner.y < maxZ + margin)
+                return new PlacementResult(roomCheck);
+            }
+
+            for (int i = 0; i < placedItems.Count; i++)
+            {
+                if (OverlapChecker.Overlaps(footprint, placedItems[i].Footprint))
                 {
-                    return false;
+                    return new PlacementResult(PlacementReason.OverlapsItem, i);
                 }
             }
 
-            return true;
+            return new PlacementResult(PlacementReason.Valid);
+        }
+
+        // OutsideRoom: a corner is outside the outline, or a wall cuts into the item (this catches the inner
+        // corner of an L-shaped room, where all four item corners can be inside but the item is not).
+        // TooCloseToWall: the item grown by `margin` on every side touches a wall. Growing a rectangle is
+        // slightly stricter than a true distance at the item's own corners (up to margin * 1.41), which is
+        // fine for a few centimetres. Touching a wall exactly at the margin is allowed.
+        private static PlacementReason CheckRoom(RoomFootprint room, in OrientedRect rect, float margin)
+        {
+            if (room == null)
+            {
+                throw new ArgumentNullException(nameof(room));
+            }
+
+            if (margin < 0f)
+            {
+                throw new ArgumentException("Margin must not be negative.", nameof(margin));
+            }
+
+            if (room.IsEmpty)
+            {
+                return PlacementReason.OutsideRoom;
+            }
+
+            Span<Vector2> corners = stackalloc Vector2[4];
+            rect.GetCorners(corners);
+            for (int i = 0; i < corners.Length; i++)
+            {
+                if (!room.Contains(corners[i].x, corners[i].y))
+                {
+                    return PlacementReason.OutsideRoom;
+                }
+            }
+
+            OrientedRect withMargin = rect.Inflate(margin);
+            bool tooClose = false;
+            IReadOnlyList<Vector2> walls = room.Corners;
+            for (int i = 0; i < walls.Count; i++)
+            {
+                Vector2 start = walls[i];
+                Vector2 end = walls[(i + 1) % walls.Count];
+                if (OverlapChecker.SegmentOverlaps(start, end, rect))
+                {
+                    return PlacementReason.OutsideRoom;
+                }
+
+                if (margin > 0f && OverlapChecker.SegmentOverlaps(start, end, withMargin))
+                {
+                    tooClose = true;
+                }
+            }
+
+            return tooClose ? PlacementReason.TooCloseToWall : PlacementReason.Valid;
         }
     }
 }
