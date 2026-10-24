@@ -950,6 +950,61 @@ Transform:
   - {fileID: 553000702}
   m_Father: {fileID: 1902511962}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1534623569
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1534623571}
+  - component: {fileID: 1534623570}
+  m_Layer: 0
+  m_Name: Placement
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1534623570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1534623569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dfd742e64115e8443937e8e5fbbb1c3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RoomPlanner.Placement::RoomPlanner.Placement.FurniturePrefabLibrary
+  entries:
+  - id: bed
+    prefab: {fileID: 5179066488872171350, guid: 805cc96e6e64a8f43b1db41330bcf5e0, type: 3}
+  - id: sofa
+    prefab: {fileID: 5399154528024209542, guid: 9e60a15cefc21b14c91c869e1045dc74, type: 3}
+  - id: table
+    prefab: {fileID: 2275290824041117578, guid: 466cc5c844dd8ad45869549fa9e75952, type: 3}
+  - id: chair
+    prefab: {fileID: 3315783332722141291, guid: bfe1e843ac747684cb24c0356a4370c1, type: 3}
+  - id: wardrobe
+    prefab: {fileID: 6104107064536229706, guid: 615b954bad84f0244a531d283ef14107, type: 3}
+--- !u!4 &1534623571
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1534623569}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1747986611
 GameObject:
   m_ObjectHideFlags: 0
@@ -1452,3 +1507,4 @@ SceneRoots:
   - {fileID: 1201670001}
   - {fileID: 862586331}
   - {fileID: 619804160}
+  - {fileID: 1534623571}
