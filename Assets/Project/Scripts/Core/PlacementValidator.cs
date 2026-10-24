@@ -45,9 +45,8 @@ namespace RoomPlanner.Core
 
         // OutsideRoom: a corner is outside the outline, or a wall cuts into the item (this catches the inner
         // corner of an L-shaped room, where all four item corners can be inside but the item is not).
-        // TooCloseToWall: the item grown by `margin` on every side touches a wall. Growing a rectangle is
-        // slightly stricter than a true distance at the item's own corners (up to margin * 1.41), which is
-        // fine for a few centimetres. Touching a wall exactly at the margin is allowed.
+        // TooCloseToWall: the exact shortest distance between the item and some wall is less than `margin`.
+        // Exactly at the margin is allowed.
         private static PlacementReason CheckRoom(RoomFootprint room, in OrientedRect rect, float margin)
         {
             if (room == null)
@@ -75,7 +74,6 @@ namespace RoomPlanner.Core
                 }
             }
 
-            OrientedRect withMargin = rect.Inflate(margin);
             bool tooClose = false;
             IReadOnlyList<Vector2> walls = room.Corners;
             for (int i = 0; i < walls.Count; i++)
@@ -87,7 +85,7 @@ namespace RoomPlanner.Core
                     return PlacementReason.OutsideRoom;
                 }
 
-                if (margin > 0f && OverlapChecker.SegmentOverlaps(start, end, withMargin))
+                if (margin > 0f && PlanarGeometry.SegmentToRectDistance(start, end, rect) < margin - OverlapChecker.Epsilon)
                 {
                     tooClose = true;
                 }

@@ -167,6 +167,39 @@ namespace RoomPlanner.Tests
             Assert.AreEqual(PlacementReason.OutsideRoom, Check(LRoom, new PlacedItem(Table, 1.75f, 1.75f, 45f)));
         }
 
+        // A chair turned 45 degrees points one corner at the wall z = 0; that corner is 0.354 m from the centre.
+        // The margin is measured as the true distance, not by growing the rectangle (which would push the
+        // corner out by margin * 1.41 and reject a 6 cm gap).
+        [Test]
+        public void Validate_RotatedCornerSixCentimetresFromWall_IsValid()
+        {
+            float cornerReach = 0.25f * Mathf.Sqrt(2f);
+
+            Assert.AreEqual(PlacementReason.Valid, Check(Room, new PlacedItem(Chair, 2f, cornerReach + 0.06f, 45f)));
+        }
+
+        [Test]
+        public void Validate_RotatedCornerFourCentimetresFromWall_IsTooCloseToWall()
+        {
+            float cornerReach = 0.25f * Mathf.Sqrt(2f);
+
+            Assert.AreEqual(PlacementReason.TooCloseToWall, Check(Room, new PlacedItem(Chair, 2f, cornerReach + 0.04f, 45f)));
+        }
+
+        [Test]
+        public void Validate_SlantedWall_UsesTrueDistance()
+        {
+            // Bottom wall slopes from (0, 0) down to (4, -0.4). The chair's lower-left corner (0.3, 0.025)
+            // is 5.47 cm from it, outside the 5 cm margin.
+            var slanted = new RoomFootprint(new[]
+            {
+                new Vector2(0f, 0f), new Vector2(4f, -0.4f), new Vector2(4f, 4f), new Vector2(0f, 4f)
+            }, height: 2.5f);
+
+            Assert.AreEqual(PlacementReason.Valid, Check(slanted, new PlacedItem(Chair, 0.55f, 0.275f, 0f)));
+            Assert.AreEqual(PlacementReason.TooCloseToWall, Check(slanted, new PlacedItem(Chair, 0.55f, 0.265f, 0f)));
+        }
+
         [Test]
         public void Validate_EmptyRoom_IsOutsideRoom()
         {

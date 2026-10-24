@@ -20,8 +20,6 @@ namespace RoomPlanner.Core
             YawDegrees = yawDegrees;
         }
 
-        public OrientedRect Inflate(float amount) => new OrientedRect(Center, Width + 2f * amount, Depth + 2f * amount, YawDegrees);
-
         // Writes the four corners in order around the rectangle into `corners` (length 4 or more).
         public void GetCorners(Span<Vector2> corners)
         {

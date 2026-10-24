@@ -125,11 +125,7 @@ namespace RoomPlanner.Core
             float nearest = float.MaxValue;
             for (int i = 0; i < corners.Length; i++)
             {
-                Vector2 a = corners[i];
-                Vector2 b = corners[(i + 1) % corners.Length];
-                Vector2 ab = b - a;
-                float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / ab.sqrMagnitude);
-                nearest = Mathf.Min(nearest, Vector2.Distance(point, a + ab * t));
+                nearest = Mathf.Min(nearest, PlanarGeometry.DistanceToSegment(point, corners[i], corners[(i + 1) % corners.Length]));
             }
 
             return nearest;
