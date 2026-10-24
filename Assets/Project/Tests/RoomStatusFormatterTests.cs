@@ -57,7 +57,7 @@ namespace RoomPlanner.Tests
         [Test]
         public void Failed_PermissionDenied_ExplainsHowToAllowIt()
         {
-            Assert.AreEqual("Spatial data permission denied. Allow it for this app in the Quest settings, then restart.",
+            Assert.AreEqual("Allow Spatial data for this app in Settings > Privacy & Safety, then restart.",
                 RoomStatusFormatter.Failed(RoomLoadFailure.PermissionDenied));
         }
 

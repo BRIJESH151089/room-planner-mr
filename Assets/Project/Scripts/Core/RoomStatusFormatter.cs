@@ -7,7 +7,7 @@ namespace RoomPlanner.Core
     {
         public const string LoadingText = "Loading room...";
         public const string NoRoomFoundText = "No room found. Run Space Setup on your Quest, then restart.";
-        public const string PermissionDeniedText = "Spatial data permission denied. Allow it for this app in the Quest settings, then restart.";
+        public const string PermissionDeniedText = "Allow Spatial data for this app in Settings > Privacy & Safety, then restart.";
         public const string ErrorText = "Could not load the room. Restart the app to try again.";
 
         public static string Loading() => LoadingText;
