@@ -2,7 +2,9 @@
     "name": "RoomPlanner.Interaction",
     "rootNamespace": "RoomPlanner.Interaction",
     "references": [
-        "RoomPlanner.Core"
+        "RoomPlanner.Core",
+        "Oculus.VR",
+        "Oculus.Interaction"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
