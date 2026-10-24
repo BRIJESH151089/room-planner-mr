@@ -217,20 +217,33 @@ namespace RoomPlanner.Room
         }
 
         // The floor anchor's PlaneBoundary2D is the wall outline in the floor plane's own 2D frame
-        // (the same points MRUKRoom.GetRoomOutline transforms to world space). Using the local frame keeps
-        // Width/Depth aligned with the room instead of with the world axes.
+        // (the same points MRUKRoom.GetRoomOutline transforms to world space). The footprint uses a frame at
+        // the floor anchor turned to the anchor's yaw, so Width/Depth stay aligned with the room instead of
+        // the world axes. Only the yaw is taken (not the anchor's 2D axes, which are mirrored relative to
+        // world x/z) so the frame is a plain rotation that placement code can map back to world space.
         private static RoomFootprint BuildFootprint(MRUKRoom room)
         {
             MRUKAnchor floor = room.FloorAnchors[0];
-            var corners = new List<Vector2>(floor.PlaneBoundary2D);
+            Transform floorTransform = floor.transform;
+            Vector3 origin = floorTransform.position;
+            Vector3 right = floorTransform.right;
+            float yawDegrees = Mathf.Atan2(-right.z, right.x) * Mathf.Rad2Deg;
+            var frame = new FloorFrame(origin.x, origin.z, origin.y, yawDegrees);
+
+            var corners = new List<Vector2>(floor.PlaneBoundary2D.Count);
+            foreach (Vector2 point in floor.PlaneBoundary2D)
+            {
+                Vector3 world = floorTransform.TransformPoint(new Vector3(point.x, point.y, 0f));
+                corners.Add(frame.ToLocal(world.x, world.z));
+            }
 
             float height = 0f;
             if (room.CeilingAnchors.Count > 0)
             {
-                height = Mathf.Max(0f, room.CeilingAnchors[0].transform.position.y - floor.transform.position.y);
+                height = Mathf.Max(0f, room.CeilingAnchors[0].transform.position.y - origin.y);
             }
 
-            return new RoomFootprint(corners, height);
+            return new RoomFootprint(corners, height, frame);
         }
 
         private void Fail(RoomLoadFailure failure)

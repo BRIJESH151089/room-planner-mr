@@ -15,6 +15,7 @@ namespace RoomPlanner.Core
     //   describe the overall extent, not a usable rectangle. Callers should express the corners in
     //   the room's own frame (not world axes) so the box lines up with the walls.
     // The outline is assumed to be a simple polygon (edges do not cross), which is what Space Setup produces.
+    // Frame says where these coordinates sit in the world (identity when not given).
     public sealed class RoomFootprint
     {
         private const float Epsilon = 1e-5f;
@@ -30,8 +31,9 @@ namespace RoomPlanner.Core
         public int WallCount => corners.Length;
         public bool IsEmpty => corners.Length == 0;
         public IReadOnlyList<Vector2> Corners => corners;
+        public FloorFrame Frame { get; }
 
-        public RoomFootprint(IReadOnlyList<Vector2> wallCorners, float height)
+        public RoomFootprint(IReadOnlyList<Vector2> wallCorners, float height, FloorFrame frame = default)
         {
             if (wallCorners == null)
             {
@@ -63,6 +65,7 @@ namespace RoomPlanner.Core
             }
 
             Height = height;
+            Frame = frame;
 
             if (count == 0)
             {
