@@ -186,13 +186,7 @@ namespace RoomPlanner.UI
                 SetClearAllConfirm(false);
             }
 
-            if (!IsShown || head == null)
-            {
-                return;
-            }
-
-            Vector3 offset = Vector3.ProjectOnPlane(transform.position - head.position, Vector3.up);
-            if (offset.magnitude > replaceDistance)
+            if (IsShown && head != null && WorldPanelPlacement.ShouldReplace(transform, head, replaceDistance))
             {
                 PlaceInView();
             }
@@ -200,18 +194,10 @@ namespace RoomPlanner.UI
 
         private void PlaceInView()
         {
-            if (head == null)
+            if (head != null)
             {
-                return;
+                WorldPanelPlacement.PlaceInView(transform, head, yawOffsetDegrees, distance, heightOffset);
             }
-
-            Vector3 forward = Vector3.ProjectOnPlane(head.forward, Vector3.up);
-            forward = forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.forward;
-            Vector3 direction = Quaternion.Euler(0f, yawOffsetDegrees, 0f) * forward;
-            Vector3 position = head.position + direction * distance + Vector3.up * heightOffset;
-
-            // A world-space canvas reads correctly when its forward axis points away from the viewer.
-            transform.SetPositionAndRotation(position, Quaternion.LookRotation(direction, Vector3.up));
         }
     }
 }

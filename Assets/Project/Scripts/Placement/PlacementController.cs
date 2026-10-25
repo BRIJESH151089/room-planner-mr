@@ -29,6 +29,9 @@ namespace RoomPlanner.Placement
         [Tooltip("Raised after every place, move, delete, undo and redo (not after loading or clearing a whole layout).")]
         [SerializeField] private UnityEvent layoutEdited = new UnityEvent();
 
+        [Tooltip("Raised with fresh measurements whenever the room or the placed items change (never per frame).")]
+        [SerializeField] private UnityEvent<RoomMetrics> metricsChanged = new UnityEvent<RoomMetrics>();
+
         private readonly List<PlacedItem> placedItems = new List<PlacedItem>();
         private readonly Dictionary<string, GameObject> instances = new Dictionary<string, GameObject>();
         private PlacementHistory history;
@@ -50,6 +53,8 @@ namespace RoomPlanner.Placement
         public string MovingId => movingId;
         public UnityEvent PlacingCancelled => placingCancelled;
         public UnityEvent LayoutEdited => layoutEdited;
+        public UnityEvent<RoomMetrics> MetricsChanged => metricsChanged;
+        public RoomMetrics Metrics { get; private set; }
 
         private void Awake()
         {
@@ -59,6 +64,7 @@ namespace RoomPlanner.Placement
         public void OnRoomLoaded(RoomFootprint loadedRoom)
         {
             room = loadedRoom;
+            RaiseMetrics();
         }
 
         public void Select(string id)
@@ -255,6 +261,7 @@ namespace RoomPlanner.Placement
                 ApplyChange(new LayoutChange(LayoutChangeKind.Added, item));
             }
 
+            RaiseMetrics();
             return fit;
         }
 
@@ -277,7 +284,17 @@ namespace RoomPlanner.Placement
         private void ApplyEdit(LayoutChange change)
         {
             ApplyChange(change);
+            RaiseMetrics();
             layoutEdited.Invoke();
+        }
+
+        private void RaiseMetrics()
+        {
+            if (IsRoomReady)
+            {
+                Metrics = RoomMetrics.Compute(room, placedItems);
+                metricsChanged.Invoke(Metrics);
+            }
         }
 
         private void ApplyChange(LayoutChange change)
