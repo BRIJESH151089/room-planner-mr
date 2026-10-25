@@ -18,6 +18,7 @@ namespace RoomPlanner.Core
 
         // Checks a candidate against the room and the items already placed, in that order:
         // OutsideRoom wins over TooCloseToWall, which wins over OverlapsItem. Does not allocate.
+        // A candidate with an Id is an item being moved: the placed item with the same Id (its old spot) is skipped.
         public static PlacementResult Validate(RoomFootprint room, in PlacedItem candidate, IReadOnlyList<PlacedItem> placedItems, float margin)
         {
             if (placedItems == null)
@@ -34,7 +35,13 @@ namespace RoomPlanner.Core
 
             for (int i = 0; i < placedItems.Count; i++)
             {
-                if (OverlapChecker.Overlaps(footprint, placedItems[i].Footprint))
+                PlacedItem other = placedItems[i];
+                if (candidate.HasId && string.Equals(other.Id, candidate.Id, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (OverlapChecker.Overlaps(footprint, other.Footprint))
                 {
                     return new PlacementResult(PlacementReason.OverlapsItem, i);
                 }
