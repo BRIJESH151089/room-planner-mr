@@ -34,8 +34,9 @@ namespace RoomPlanner.Placement
         }
 
         // movingItemId: the Id of a placed item being moved, so validation ignores that item's old spot; null when placing.
+        // grabOffset: from the grabbed spot to the item's centre in the item's yaw frame (GrabOffset); zero when placing.
         public void UpdatePreview(RoomFootprint room, FurnitureDefinition definition, float yawDegrees, IReadOnlyList<PlacedItem> placedItems,
-            string movingItemId = null)
+            string movingItemId = null, Vector2 grabOffset = default)
         {
             FloorFrame frame = room.Frame;
             if (rayOrigin == null
@@ -45,7 +46,8 @@ namespace RoomPlanner.Placement
                 return;
             }
 
-            Vector2 local = GridSnapper.Snap(frame.ToLocal(hit.x, hit.z), GridSnapper.PositionStep);
+            Vector2 pointer = frame.ToLocal(hit.x, hit.z);
+            Vector2 local = GridSnapper.Snap(GrabOffset.CentreFromPointer(pointer, grabOffset, yawDegrees), GridSnapper.PositionStep);
             var candidate = new PlacedItem(definition, local.x, local.y, yawDegrees, movingItemId);
             PlacementResult result = PlacementValidator.Validate(room, candidate, placedItems, PlacementValidator.WallMargin);
 

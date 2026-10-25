@@ -31,6 +31,38 @@ namespace RoomPlanner.Placement
             return RayVsOrientedBox.FindNearest(rayOrigin.position, rayOrigin.forward, room.Frame, items, maxRayDistance, out _);
         }
 
+        // Where the controller ray grabs this item, on the floor plane in the room frame (see GrabOffset.ChooseGrabPoint).
+        public bool TryGetGrabPoint(RoomFootprint room, in PlacedItem item, out Vector2 grabPoint)
+        {
+            grabPoint = new Vector2(item.X, item.Z);
+            if (rayOrigin == null)
+            {
+                return false;
+            }
+
+            FloorFrame frame = room.Frame;
+            Vector3 origin = rayOrigin.position;
+            Vector3 direction = rayOrigin.forward;
+
+            bool hasFloorHit = FloorRay.TryHit(origin, direction, frame.Height, out Vector3 floorWorld, maxRayDistance);
+            Vector2 floorHit = hasFloorHit ? frame.ToLocal(floorWorld.x, floorWorld.z) : default;
+
+            // Box hit in the room frame (RayVsOrientedBox works in that frame, with y measured from the floor).
+            Vector2 planarOrigin = frame.ToLocal(origin.x, origin.z);
+            Vector2 planarDirection = PlanarRotation.InverseRotate(new Vector2(direction.x, direction.z), frame.YawDegrees);
+            var localOrigin = new Vector3(planarOrigin.x, origin.y - frame.Height, planarOrigin.y);
+            var localDirection = new Vector3(planarDirection.x, direction.y, planarDirection.y);
+            Vector2 boxHit = grabPoint;
+            if (RayVsOrientedBox.TryIntersect(localOrigin, localDirection, item.Footprint, item.Definition.Height, out float distance, maxRayDistance))
+            {
+                Vector3 hit = localOrigin + localDirection.normalized * distance;
+                boxHit = new Vector2(hit.x, hit.z);
+            }
+
+            grabPoint = GrabOffset.ChooseGrabPoint(item, hasFloorHit, floorHit, boxHit);
+            return true;
+        }
+
         // Pass null to clear the highlight.
         public void SetHighlighted(GameObject instance)
         {

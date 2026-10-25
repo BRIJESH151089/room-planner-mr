@@ -42,6 +42,7 @@ namespace RoomPlanner.Placement
         private string hoveredId;
         private string movingId;
         private PlacedItem movingOriginal;
+        private Vector2 movingGrabOffset;
 
         public IReadOnlyList<PlacedItem> PlacedItems => placedItems;
         public PlacementHistory History => history;
@@ -202,6 +203,11 @@ namespace RoomPlanner.Placement
             selection.SetHighlighted(null);
             movingOriginal = placedItems[index];
             movingId = id;
+
+            // Keep the grabbed spot under the pointer instead of snapping the item's centre to it.
+            movingGrabOffset = selection.TryGetGrabPoint(room, movingOriginal, out Vector2 grabPoint)
+                ? GrabOffset.FromGrabPoint(movingOriginal, grabPoint)
+                : Vector2.zero;
             yawDegrees = movingOriginal.YawDegrees;
             instance.SetActive(false);
             return true;
@@ -359,7 +365,7 @@ namespace RoomPlanner.Placement
             if (IsMoving)
             {
                 SetHovered(-1);
-                ghost.UpdatePreview(room, movingOriginal.Definition, yawDegrees, placedItems, movingId);
+                ghost.UpdatePreview(room, movingOriginal.Definition, yawDegrees, placedItems, movingId, movingGrabOffset);
                 return;
             }
 
