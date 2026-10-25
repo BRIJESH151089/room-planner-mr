@@ -17,12 +17,26 @@ Walk around your actual room in passthrough, drop in virtual furniture (sofas, t
 
 ## Project status
 
-- **Phase 1 (setup)** — done: Quest/Android build configuration, passthrough + scene permission, the Core/Placement/Room/Interaction/UI assembly layout, a `FurnitureItem` + `PlacementValidator` core model with tests, and a base scene with a passthrough-enabled camera rig.
+- **Phase 1 (setup)** — done: Quest/Android build configuration, passthrough + scene permission, the Core/Placement/Room/Interaction/UI assembly layout, a first core model with tests, and a base scene with a passthrough-enabled camera rig.
 - **Phase 2 (load the room)** — done in the Editor (see "What is tested" below): on start the app loads your room from Space Setup through MRUK and draws the floor (teal), walls (amber) and ceiling (faint blue) as a translucent overlay on passthrough. A small panel in front of you says `Room loaded: W x D m, N walls`, or tells you to run Space Setup / allow the spatial data permission.
 
 - **Phase 3A (furniture placement, floor items)** — done in the Editor (see "What is tested"): after the room loads, a catalog panel appears to your left with five items (bed, sofa, table, chair, wardrobe). Pick one with the controller ray, aim the right controller at the floor, and a ghost of the item follows the ray: green where it fits, red where it would go through a wall, sit closer than 5 cm to a wall, or overlap furniture you already placed. Pull the trigger to place it; push the right thumbstick left or right to turn it in 15° steps.
+- **Phase 3B (edit furniture)** — done in the Editor (see "What is tested"): with no catalog item selected, point at placed furniture to highlight it and pull the trigger to pick it up. The item turns into the green/red ghost; move and turn it, pull the trigger to drop it, or squeeze the grip to put it back. B deletes the highlighted or held item; X undoes and Y redoes any place, move or delete (up to 50 steps). Click the selected catalog item again, or squeeze the grip, to stop placing and go back to picking up.
 
 Wall items, measurements/save-load, and polish/release are still ahead.
+
+### Controls
+
+| Button | Action |
+|---|---|
+| Right trigger | Place the selected item / pick up the pointed item / drop the held item |
+| Right grip | Put a held item back, or stop placing |
+| Right thumbstick left/right | Turn the ghost 15° per push |
+| B (right) | Delete the highlighted or held item |
+| X (left) | Undo (while holding an item: put it back) |
+| Y (left) | Redo |
+
+While the controller ray is over the catalog, the right-hand buttons operate the catalog instead.
 
 ### How room loading works
 
@@ -43,6 +57,12 @@ Wall items, measurements/save-load, and polish/release are still ahead.
 - **UI:** `CatalogPanel` builds its button labels from the catalog and highlights the selection. Ray input uses the Interaction SDK's comprehensive OVR rig (added with Meta's quick action, locomotion disabled so the thumbstick only turns furniture) and the "Add Ray Interaction to Canvas" quick action.
 - Furniture models are placeholders made from scaled cubes with simple URP Lit materials, sized exactly like the catalog.
 
+### How editing works
+
+- **Core:** every placed item has a stable `Id` (from a Guid) that survives moves and undo/redo, ready for save/load. `RayVsOrientedBox` tests the controller ray against each item's box (footprint plus height), so the prefabs need no colliders. `PlacementHistory` keeps undo/redo stacks of place, move and remove commands (50 max, a new action clears redo). A moving item is validated against the room and all *other* items.
+- **Placement:** `SelectionController` highlights the item the ray points at by swapping in a highlight material. `PlacementController` applies every history change to the scene (spawn, destroy or move one prefab by Id) and hides the held item's prefab while the ghost shows its new spot. Selection and ghost updates allocate no memory per frame.
+- **Interaction:** `ControllerPlacementInput` also raises grip, B, X and Y events (button names checked in the installed `OVRInput`).
+
 ## How to open and run
 
 1. Install Unity **6000.3.5f2** via Unity Hub.
@@ -61,12 +81,13 @@ Wall items, measurements/save-load, and polish/release are still ahead.
 - Edit Mode (NUnit): the Core logic below.
 - Play Mode in the Editor: MRUK sample room prefabs, the Meta XR Simulator, a real Space Setup room over Quest Link, and the no-room failure path. Surfaces appear, the panel shows the right text, no exceptions.
 - Placement in Play Mode (MRUK rooms `Bedroom00` and `OtherRoom04_empty`, and a real room over Quest Link): all five items placed; items through a wall, too close to a wall, in corners, in an L-shaped cut-out, over an inner corner and on top of other furniture are rejected with the right reason; placed prefabs land exactly on the validated footprint. These runs aimed the ghost with a scripted ray and called the place/rotate/select methods directly, because no one was holding the controllers.
-- **Not yet tested by hand**: aiming and pulling the trigger with a real controller, clicking catalog buttons with the controller ray, the thumbstick rotation, and the "trigger over UI does not place" rule. These need the headset (over Link or as a build).
+- Editing in Play Mode (a real room over Quest Link, and MRUK rooms `Bedroom00` and `OtherRoom04_empty`): place three items, pick one up, try to drop it into a wall (rejected, still held), drop it somewhere valid, delete it with B, undo the delete (same Id comes back), undo the move, redo it. Also grip-cancel, B while holding, and grip while placing. Driven by a scripted ray and by invoking the input component's events, not by pressing real buttons.
+- **Not yet tested by hand**: anything with a real controller: aiming, trigger, grip, thumbstick, B/X/Y presses, clicking catalog buttons with the ray, and the "buttons over the catalog go to the UI" rule. These need the headset (over Link or as a build).
 - **Not yet tested as a standalone build on the headset**: the runtime permission prompt (accept and deny), loading Space Setup data without Link, and frame rate with the Interaction SDK rig.
 
 ## Tests
 
-94 NUnit Edit Mode tests, all passing: furniture catalog and labels, `OverlapChecker` (separate, overlapping, touching, rotated 45°, one inside another, walls), `PlacementValidator` (every reason, margins, corners, L- and U-shaped rooms, slanted walls), `FloorRay`, `YawStepper`, `GridSnapper`, `AxisStepDetector`, `FloorFrame`, `RoomFootprint`, `RoomStatusFormatter` and `FurnitureItem`. Run via the Test Runner as above.
+117 NUnit Edit Mode tests, all passing: furniture catalog and labels, item ids, `OverlapChecker` (separate, overlapping, touching, rotated 45°, one inside another, walls), `PlacementValidator` (every reason, margins, corners, L- and U-shaped rooms, slanted walls, moves excluding themselves), `RayVsOrientedBox` (hit, miss, rotated, nearest of several), `PlacementHistory` (undo/redo order, redo cleared, 50-entry cap, exact move poses, delete restoring the same Id), `FloorRay`, `YawStepper`, `GridSnapper`, `AxisStepDetector`, `FloorFrame`, `RoomFootprint` and `RoomStatusFormatter`. Run via the Test Runner as above.
 
 ## AI-use note
 
