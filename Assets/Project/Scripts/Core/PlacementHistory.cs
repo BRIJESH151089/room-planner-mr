@@ -161,6 +161,13 @@ namespace RoomPlanner.Core
             return change;
         }
 
+        // Forgets all undo and redo steps (used when a whole layout is loaded or cleared). The item list is untouched.
+        public void Clear()
+        {
+            undo.Clear();
+            redo.Clear();
+        }
+
         public bool TryUndo(out LayoutChange change)
         {
             change = default;

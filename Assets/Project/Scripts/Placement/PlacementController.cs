@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using RoomPlanner.Core;
 using UnityEngine;
@@ -225,6 +226,38 @@ namespace RoomPlanner.Placement
         }
 
         public bool TryGetInstance(string id, out GameObject instance) => instances.TryGetValue(id, out instance);
+
+        // Replaces everything with a saved layout, re-checked against the current room (see LayoutRevalidator):
+        // items that no longer fit are skipped and reported in the result. Undo history starts fresh.
+        public LayoutFit ReplaceLayout(IReadOnlyList<PlacedItem> items)
+        {
+            CancelMove();
+            selection.SetHighlighted(null);
+            foreach (GameObject instance in instances.Values)
+            {
+                Destroy(instance);
+            }
+
+            instances.Clear();
+            placedItems.Clear();
+            history.Clear();
+
+            LayoutFit fit = IsRoomReady
+                ? LayoutRevalidator.Fit(room, items, PlacementValidator.WallMargin)
+                : new LayoutFit(Array.Empty<PlacedItem>(), items);
+            foreach (PlacedItem item in fit.Accepted)
+            {
+                placedItems.Add(item);
+                ApplyChange(new LayoutChange(LayoutChangeKind.Added, item));
+            }
+
+            return fit;
+        }
+
+        public void ClearAll()
+        {
+            ReplaceLayout(Array.Empty<PlacedItem>());
+        }
 
         private void EndMove()
         {
