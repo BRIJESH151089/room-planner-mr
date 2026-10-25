@@ -49,6 +49,7 @@ namespace RoomPlanner.Placement
         public FurnitureDefinition Selected => selected;
         public float YawDegrees => yawDegrees;
         public bool IsRoomReady => room != null;
+        public RoomFootprint Room => room;
         public string HoveredId => hoveredId;
         public bool IsMoving => movingId != null;
         public string MovingId => movingId;

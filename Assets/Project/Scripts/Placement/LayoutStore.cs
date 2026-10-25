@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using RoomPlanner.Core;
@@ -93,21 +92,6 @@ namespace RoomPlanner.Placement
                 return false;
             }
         }
-
-        // Session-file shortcuts used by LayoutPersistence.
-        public bool HasSavedLayout => Exists(LayoutSlot.Session);
-
-        public bool Save(IReadOnlyList<PlacedItem> items) => Write(LayoutSlot.Session, LayoutSerializer.Serialize(items));
-
-        // False when nothing has been saved yet (or the file cannot be read); otherwise the parsed layout,
-        // which may itself carry an error for malformed content.
-        public bool TryLoad(out LayoutLoadResult result)
-        {
-            result = TryRead(LayoutSlot.Session, out string json) ? LayoutSerializer.Deserialize(json) : null;
-            return result != null;
-        }
-
-        public bool Clear() => Delete(LayoutSlot.Session);
 
         private static void SwapIn(string source, string destination)
         {
