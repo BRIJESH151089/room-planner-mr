@@ -1109,6 +1109,9 @@ MonoBehaviour:
   panelRect: {fileID: 389158127}
   heightWithoutHint: 140
   heightWithHint: 230
+  heightHintOnly: 120
+  statusHoldSeconds: 4
+  statusFadeSeconds: 0.5
   distance: 1.1
   heightOffset: -0.2
   recenterAngle: 30
@@ -1944,7 +1947,7 @@ MonoBehaviour:
   head: {fileID: 2029496853}
   distance: 1
   yawOffsetDegrees: -35
-  heightOffset: -0.15
+  heightOffset: 0
   replaceDistance: 2
   normalColor: {r: 0.18, g: 0.2, b: 0.25, a: 0.95}
   selectedColor: {r: 0.1, g: 0.62, b: 0.55, a: 1}
@@ -2064,7 +2067,7 @@ MonoBehaviour:
   head: {fileID: 2029496853}
   distance: 1
   yawOffsetDegrees: 35
-  heightOffset: -0.15
+  heightOffset: 0
   replaceDistance: 2
 --- !u!4 &828252106
 Transform:
@@ -3081,7 +3084,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ee3cd5670e5c9c4db035e5dd37e8d19, type: 3}
   m_Name: 
   m_EditorClassIdentifier: RoomPlanner.Placement::RoomPlanner.Placement.LayoutStore
-  fileName: layout.json
+  sessionFileName: layout.json
+  checkpointFileName: checkpoint.json
 --- !u!114 &1193037302
 MonoBehaviour:
   m_ObjectHideFlags: 0

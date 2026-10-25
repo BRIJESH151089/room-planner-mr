@@ -25,7 +25,8 @@ namespace RoomPlanner.UI
         [Tooltip("Degrees to the left (negative) or right of the view direction.")]
         [SerializeField] private float yawOffsetDegrees = -35f;
 
-        [SerializeField] private float heightOffset = -0.15f;
+        [Tooltip("Height of the panel centre relative to the eyes, in metres. At eye level the panel stays above floor furniture.")]
+        [SerializeField] private float heightOffset = 0f;
 
         [Tooltip("Place the panel in front of the user again when they are farther than this from it.")]
         [SerializeField] private float replaceDistance = 2.0f;
