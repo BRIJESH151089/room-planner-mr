@@ -4,52 +4,38 @@ using System.IO;
 using System.Text;
 using RoomPlanner.Core;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace RoomPlanner.Placement
 {
-    // Saves, loads and clears the furniture layout file in Application.persistentDataPath (JSON from LayoutSerializer).
-    // A save writes a temp file, flushes it to disk and then swaps it in, so a crash mid-write leaves the previous
-    // layout intact. If a crash happened after the old file was removed but before the swap, Load falls back to the
-    // complete temp file. IO errors are logged and reported as false; nothing here throws into gameplay.
-    public class LayoutStore : MonoBehaviour
+    // Layout files in Application.persistentDataPath, one per LayoutSlot: the session (autosave, resumed on start)
+    // and the checkpoint (Save/Load buttons). A write goes to a temp file, is flushed to disk and then swapped in,
+    // so a crash mid-write leaves the previous file intact. If a crash happened after the old file was removed but
+    // before the swap, reading falls back to the complete temp file. IO errors are logged and reported as false;
+    // nothing here throws into gameplay.
+    public class LayoutStore : MonoBehaviour, ILayoutStorage
     {
-        [SerializeField] private string fileName = "layout.json";
+        [FormerlySerializedAs("fileName")]
+        [SerializeField] private string sessionFileName = "layout.json";
+        [SerializeField] private string checkpointFileName = "checkpoint.json";
 
-        public string FilePath => Path.Combine(Application.persistentDataPath, fileName);
-        private string TempPath => FilePath + ".tmp";
+        public string PathFor(LayoutSlot slot) =>
+            Path.Combine(Application.persistentDataPath, slot == LayoutSlot.Checkpoint ? checkpointFileName : sessionFileName);
 
-        public bool HasSavedLayout => File.Exists(FilePath) || File.Exists(TempPath);
+        private static string TempPathOf(string path) => path + ".tmp";
 
-        public bool Save(IReadOnlyList<PlacedItem> items)
+        public bool Exists(LayoutSlot slot)
         {
-            try
-            {
-                string json = LayoutSerializer.Serialize(items);
-                Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
-
-                using (var stream = new FileStream(TempPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    byte[] bytes = new UTF8Encoding(false).GetBytes(json);
-                    stream.Write(bytes, 0, bytes.Length);
-                    stream.Flush(true);
-                }
-
-                SwapIn(TempPath, FilePath);
-                return true;
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning($"{nameof(LayoutStore)}: could not save the layout to {FilePath}: {exception.Message}");
-                return false;
-            }
+            string path = PathFor(slot);
+            return File.Exists(path) || File.Exists(TempPathOf(path));
         }
 
-        // False when nothing has been saved yet (or the file cannot be read); otherwise the parsed layout,
-        // which may itself carry an error for malformed content.
-        public bool TryLoad(out LayoutLoadResult result)
+        public bool TryRead(LayoutSlot slot, out string json)
         {
-            result = null;
-            string path = File.Exists(FilePath) ? FilePath : File.Exists(TempPath) ? TempPath : null;
+            json = null;
+            string finalPath = PathFor(slot);
+            string tempPath = TempPathOf(finalPath);
+            string path = File.Exists(finalPath) ? finalPath : File.Exists(tempPath) ? tempPath : null;
             if (path == null)
             {
                 return false;
@@ -57,7 +43,7 @@ namespace RoomPlanner.Placement
 
             try
             {
-                result = LayoutSerializer.Deserialize(File.ReadAllText(path, Encoding.UTF8));
+                json = File.ReadAllText(path, Encoding.UTF8);
                 return true;
             }
             catch (Exception exception)
@@ -67,20 +53,61 @@ namespace RoomPlanner.Placement
             }
         }
 
-        public bool Clear()
+        public bool Write(LayoutSlot slot, string json)
         {
+            string path = PathFor(slot);
+            string tempPath = TempPathOf(path);
             try
             {
-                File.Delete(FilePath);
-                File.Delete(TempPath);
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+                using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    byte[] bytes = new UTF8Encoding(false).GetBytes(json);
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+
+                SwapIn(tempPath, path);
                 return true;
             }
             catch (Exception exception)
             {
-                Debug.LogWarning($"{nameof(LayoutStore)}: could not delete {FilePath}: {exception.Message}");
+                Debug.LogWarning($"{nameof(LayoutStore)}: could not save the layout to {path}: {exception.Message}");
                 return false;
             }
         }
+
+        public bool Delete(LayoutSlot slot)
+        {
+            string path = PathFor(slot);
+            try
+            {
+                File.Delete(path);
+                File.Delete(TempPathOf(path));
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"{nameof(LayoutStore)}: could not delete {path}: {exception.Message}");
+                return false;
+            }
+        }
+
+        // Session-file shortcuts used by LayoutPersistence.
+        public bool HasSavedLayout => Exists(LayoutSlot.Session);
+
+        public bool Save(IReadOnlyList<PlacedItem> items) => Write(LayoutSlot.Session, LayoutSerializer.Serialize(items));
+
+        // False when nothing has been saved yet (or the file cannot be read); otherwise the parsed layout,
+        // which may itself carry an error for malformed content.
+        public bool TryLoad(out LayoutLoadResult result)
+        {
+            result = TryRead(LayoutSlot.Session, out string json) ? LayoutSerializer.Deserialize(json) : null;
+            return result != null;
+        }
+
+        public bool Clear() => Delete(LayoutSlot.Session);
 
         private static void SwapIn(string source, string destination)
         {
