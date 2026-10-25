@@ -9,10 +9,23 @@ namespace RoomPlanner.UI
     //
     // The panel lazily follows the head: it stays put while it is roughly in view and glides back
     // in front of the user when they turn or walk away, so it never sticks to the face.
+    //
+    // It also shows the first-use hint (OnboardingHint) under the status line while the room is loaded and
+    // nothing is placed; PlacementController.MetricsChanged -> ShowMetrics reports the item count. The panel
+    // grows to make room for the hint and shrinks back once it is gone.
     public class RoomStatusPanel : MonoBehaviour
     {
         [SerializeField] private Text label;
         [SerializeField] private Transform head;
+
+        [Header("First-use hint")]
+        [SerializeField] private Text hintLabel;
+        [SerializeField] private RectTransform panelRect;
+        [SerializeField] private float heightWithoutHint = 140f;
+        [SerializeField] private float heightWithHint = 230f;
+
+        private readonly OnboardingHint hint = new OnboardingHint();
+        private bool hintShown;
 
         [Tooltip("Horizontal distance from the head, in metres.")]
         [SerializeField] private float distance = 1.1f;
@@ -28,13 +41,51 @@ namespace RoomPlanner.UI
         private bool placed;
         private bool recentering;
 
-        private void OnEnable() => ShowLoading();
+        private void OnEnable()
+        {
+            ShowLoading();
+            ApplyHint();
+        }
 
         public void ShowLoading() => SetText(RoomStatusFormatter.Loading());
 
-        public void ShowLoaded(RoomFootprint room) => SetText(RoomStatusFormatter.Loaded(room));
+        public void ShowLoaded(RoomFootprint room)
+        {
+            SetText(RoomStatusFormatter.Loaded(room));
+            hint.OnRoomReady(0);
+            ApplyHint();
+        }
 
         public void ShowFailed(RoomLoadFailure failure) => SetText(RoomStatusFormatter.Failed(failure));
+
+        public void ShowMetrics(RoomMetrics metrics)
+        {
+            hint.OnItemCountChanged(metrics.ItemCount);
+            ApplyHint();
+        }
+
+        public bool IsHintVisible => hintShown;
+
+        private void ApplyHint()
+        {
+            bool visible = hint.IsVisible && hintLabel != null;
+            if (visible == hintShown && hintLabel != null && hintLabel.gameObject.activeSelf == visible)
+            {
+                return;
+            }
+
+            hintShown = visible;
+            if (hintLabel != null)
+            {
+                hintLabel.text = OnboardingHint.Text;
+                hintLabel.gameObject.SetActive(visible);
+            }
+
+            if (panelRect != null)
+            {
+                panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, visible ? heightWithHint : heightWithoutHint);
+            }
+        }
 
         private void SetText(string text)
         {
