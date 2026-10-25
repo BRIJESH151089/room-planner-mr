@@ -68,7 +68,7 @@ namespace RoomPlanner.Placement
                 return false;
             }
 
-            PlacedItem item = ghost.Candidate;
+            PlacedItem item = ghost.Candidate.WithId(PlacedItem.NewId());
             if (!library.TryGetPrefab(item.Definition.Id, out GameObject prefab))
             {
                 Debug.LogWarning($"{nameof(PlacementController)}: no prefab for '{item.Definition.Id}'.");
