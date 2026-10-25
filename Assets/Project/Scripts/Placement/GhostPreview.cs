@@ -33,7 +33,9 @@ namespace RoomPlanner.Placement
             }
         }
 
-        public void UpdatePreview(RoomFootprint room, FurnitureDefinition definition, float yawDegrees, IReadOnlyList<PlacedItem> placedItems)
+        // movingItemId: the Id of a placed item being moved, so validation ignores that item's old spot; null when placing.
+        public void UpdatePreview(RoomFootprint room, FurnitureDefinition definition, float yawDegrees, IReadOnlyList<PlacedItem> placedItems,
+            string movingItemId = null)
         {
             FloorFrame frame = room.Frame;
             if (rayOrigin == null
@@ -44,7 +46,7 @@ namespace RoomPlanner.Placement
             }
 
             Vector2 local = GridSnapper.Snap(frame.ToLocal(hit.x, hit.z), GridSnapper.PositionStep);
-            var candidate = new PlacedItem(definition, local.x, local.y, yawDegrees);
+            var candidate = new PlacedItem(definition, local.x, local.y, yawDegrees, movingItemId);
             PlacementResult result = PlacementValidator.Validate(room, candidate, placedItems, PlacementValidator.WallMargin);
 
             Candidate = candidate;
