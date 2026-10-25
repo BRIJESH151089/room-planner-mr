@@ -6,25 +6,25 @@ Solo portfolio project. Design, integration and testing by me; built with [Claud
 
 ## Goal
 
-Walk around your actual room in passthrough, drop in virtual furniture (sofas, tables, shelves), and see how it fits before you buy or move anything — placement is validated against the real room's floor footprint so items can't end up floating or clipping through walls.
+Walk around your actual room in passthrough, drop in virtual furniture, and see how it fits before you buy or move anything. Placement is validated against the real room's floor outline so items can't end up floating or clipping through walls.
 
 ## Tech
 
 - Unity 6000.3.5f2, Universal Render Pipeline (URP), OpenXR
-- Meta XR SDK 207.0.1 — Core, Interaction SDK (+ Essentials), MR Utility Kit (MRUK)
+- Meta XR SDK 207.0.1: Core, Interaction SDK (+ Essentials), MR Utility Kit (MRUK)
 - NUnit Edit Mode tests (Unity Test Framework)
 - Target device: Meta Quest 3S, 72 FPS
 
-## Project status
+## Features (v1.0)
 
-- **Phase 1 (setup)** — done: Quest/Android build configuration, passthrough + scene permission, the Core/Placement/Room/Interaction/UI assembly layout, a first core model with tests, and a base scene with a passthrough-enabled camera rig.
-- **Phase 2 (load the room)** — done in the Editor (see "What is tested" below): on start the app loads your room from Space Setup through MRUK and draws the floor (teal), walls (amber) and ceiling (faint blue) as a translucent overlay on passthrough. A small panel in front of you says `Room loaded: W x D m, N walls`, or tells you to run Space Setup / allow the spatial data permission.
-
-- **Phase 3A (furniture placement, floor items)** — done in the Editor (see "What is tested"): after the room loads, a catalog panel appears to your left with five items (bed, sofa, table, chair, wardrobe). Pick one with the controller ray, aim the right controller at the floor, and a ghost of the item follows the ray: green where it fits, red where it would go through a wall, sit closer than 5 cm to a wall, or overlap furniture you already placed. Pull the trigger to place it; push the right thumbstick left or right to turn it in 15° steps.
-- **Phase 3B (edit furniture)** — done in the Editor (see "What is tested"): with no catalog item selected, point at placed furniture to highlight it and pull the trigger to pick it up. The item turns into the green/red ghost; move and turn it, pull the trigger to drop it, or squeeze the grip to put it back. B deletes the highlighted or held item; X undoes and Y redoes any place, move or delete (up to 50 steps). Click the selected catalog item again, or squeeze the grip, to stop placing and go back to picking up.
-- **Phase 4 (save/load and measurements)** — done in the Editor (see "What is tested"): your layout is saved automatically about a second after every change and comes back the next time the app starts, re-checked against the room. The catalog panel has Save, Load and Clear All buttons (Clear All needs a second press within 3 seconds). A measurements panel to your right shows the room size, floor area, area used by furniture, free area and item count.
-
-Wall items and polish/release are still ahead.
+- **Room loading:** loads your Space Setup room through MRUK and draws the floor (teal), walls (amber) and ceiling (faint blue) as a light translucent overlay on passthrough. A status line says `Room loaded: W x D m, N walls` and fades out after about 4 seconds; if there is no room or the spatial data permission is denied, it says what to do and stays.
+- **First-use hint:** in an empty room a short hint explains how to pick and place furniture. It stays until the first item is placed.
+- **Placing:** a catalog panel to your left has five items (bed, sofa, table, chair, wardrobe). Pick one with the controller ray, aim at the floor, and a ghost follows: green where it fits, red where it would go through a wall, sit closer than 5 cm to a wall, or overlap other furniture. Snaps to 5 cm in the room's own frame and turns in 15° steps.
+- **Editing:** point at placed furniture to highlight it, pick it up (the spot you grabbed stays under the ray), move and turn it, drop it or put it back. Delete, and undo/redo any place, move or delete (up to 50 steps).
+- **Session autosave:** your current layout is saved automatically about a second after every change (and when the app is paused or closed), and comes back the next time the app starts.
+- **Save / Load checkpoint:** the Save button stores the current layout as your saved version. Load brings that saved version back, replacing what is on the floor, even after Clear All or an app restart. Clear All (press twice within 3 seconds) empties the floor but keeps the saved version.
+- **Measurements:** a panel to your right shows room size, floor area, area used by furniture, free area and item count.
+- **Controllers only:** the Interaction SDK hand interactors are turned off; both Touch controllers drive the ray and the buttons.
 
 ### Controls
 
@@ -37,41 +37,27 @@ Wall items and polish/release are still ahead.
 | X (left) | Undo (while holding an item: put it back) |
 | Y (left) | Redo |
 
-While the controller ray is over the catalog, the right-hand buttons operate the catalog instead. The catalog's Save / Load / Clear All buttons are clicked with the ray and trigger like the furniture buttons.
+While the controller ray is over the catalog, the trigger clicks the catalog instead. The Save / Load / Clear All buttons are clicked with the ray and trigger like the furniture buttons.
 
-### How room loading works
+## How it works
 
-- `RoomLoader` (Room assembly) starts the MRUK load itself; MRUK's own *Load Scene On Startup* is off so permission-denied and no-room cases can be reported.
-  - On the headset it requests the spatial data permission (`com.oculus.permission.USE_SCENE`), then loads Space Setup data.
-  - In the Editor it tries device data first (Meta XR Simulator or Quest Link), then falls back to an MRUK sample room prefab.
-- It turns the floor outline and ceiling height into a `RoomFootprint` (Core) and raises `RoomLoaded`, or raises `RoomLoadFailed` with a reason. It never throws on a failed load.
-- Three MRUK `EffectMesh` objects draw the surfaces with unlit, transparent URP materials (no shadows, no extra lights).
-- `RoomStatusPanel` (UI assembly, depends only on Core) shows the text from `RoomStatusFormatter`. The scene wires the loader's events to the panel.
-- Non-rectangular rooms keep their real outline: area and "is this point inside" use the exact polygon; width and depth are the bounding box in the room's own floor frame.
-- The footprint also carries a `FloorFrame` (floor height, origin and yaw of the floor anchor), so placement code can map between room coordinates and the world without touching MRUK.
+Assemblies under `Assets/Project/Scripts`, with dependencies pointing toward Core:
 
-### How furniture placement works
+- **Core** (plain C#, no MonoBehaviours, XR or Meta references; all unit-tested): `RoomFootprint` + `FloorFrame` (the room outline in its own floor frame), `FurnitureCatalog`, `PlacedItem` (with a stable Id), `PlacementValidator` and `OverlapChecker` (separating axis theorem), `RayVsOrientedBox`, `GrabOffset`, `PlacementHistory` (undo/redo), `LayoutSerializer`, `LayoutRevalidator`, `LayoutSlots`, `RoomMetrics`, `OnboardingHint`, `StatusFade`, `ConfirmGate` and the text formatters.
+- **Room:** `RoomLoader` starts the MRUK load itself (MRUK's *Load Scene On Startup* is off, so permission-denied and no-room cases can be reported) and turns the MRUK room into a `RoomFootprint`. `QuestPerformanceSettings` turns on dynamic foveated rendering.
+- **Placement:** `GhostPreview`, `PlacementController`, `SelectionController` and the save code. The ghost and selection updates allocate no memory per frame. Furniture prefabs need no colliders; the ray is tested against each item's box in Core.
+- **Interaction:** `ControllerPlacementInput` reads the Touch controllers through `OVRInput` (button names checked in the installed SDK) and raises events.
+- **UI:** world-space panels (`RoomStatusPanel`, `CatalogPanel`, `MetricsPanel`) that only know Core. The catalog and measurements panels sit at eye level, 1 m away and 35° to each side, so they stay above floor furniture. Ray input uses the Interaction SDK's comprehensive OVR rig (locomotion disabled) and its "Add Ray Interaction to Canvas" quick action.
 
-- **Core (plain C#, tested):** `FurnitureCatalog` (sizes in metres), `PlacedItem` (item + position + yaw), `OverlapChecker` (separating axis theorem; touching is not overlapping), `PlacementValidator.Validate` (returns `Valid`, `OutsideRoom`, `TooCloseToWall` or `OverlapsItem`, with a 5 cm wall margin measured as the true distance), `FloorRay`, `YawStepper` (15° steps), `GridSnapper` (5 cm) and `AxisStepDetector` (one rotation step per thumbstick push).
-- **Placement:** `GhostPreview` casts the right controller's ray onto the floor plane, snaps to 5 cm in the room's own frame (so items line up with the walls), validates and turns green/red. `PlacementController` holds the selection, yaw and placed items and spawns the prefab on a valid trigger press. The ghost update does not allocate memory.
-- **Interaction:** `ControllerPlacementInput` reads the right Touch controller (trigger, thumbstick) and raises events. While the Interaction SDK ray is over the catalog, the trigger clicks the UI instead of placing furniture.
-- **UI:** `CatalogPanel` builds its button labels from the catalog and highlights the selection. Ray input uses the Interaction SDK's comprehensive OVR rig (added with Meta's quick action, locomotion disabled so the thumbstick only turns furniture) and the "Add Ray Interaction to Canvas" quick action.
-- Furniture models are placeholders made from scaled cubes with simple URP Lit materials, sized exactly like the catalog.
+### Saving
 
-### How editing works
-
-- **Core:** every placed item has a stable `Id` (from a Guid) that survives moves and undo/redo, ready for save/load. `RayVsOrientedBox` tests the controller ray against each item's box (footprint plus height), so the prefabs need no colliders. `PlacementHistory` keeps undo/redo stacks of place, move and remove commands (50 max, a new action clears redo). A moving item is validated against the room and all *other* items.
-- **Placement:** `SelectionController` highlights the item the ray points at by swapping in a highlight material. `PlacementController` applies every history change to the scene (spawn, destroy or move one prefab by Id) and hides the held item's prefab while the ghost shows its new spot. Selection and ghost updates allocate no memory per frame.
-- **Interaction:** `ControllerPlacementInput` also raises grip, B, X and Y events (button names checked in the installed `OVRInput`).
-
-### How saving and measurements work
-
-- **File:** `layout.json` in `Application.persistentDataPath` (on the Quest that is the app's own data folder; in the Editor, `%USERPROFILE%\AppData\LocalLow\<company>\room-planner-mr`). Plain, indented JSON with a `version` and one line per item: `id`, `definitionId`, `posX`, `posZ`, `yawDegrees`. Positions are in the room's own floor frame, so the layout follows the room.
-- **Core:** `LayoutSerializer` (exact round-trip; unknown furniture is dropped and counted; malformed, empty or wrong-version files give an empty layout with an error instead of crashing), `LayoutRevalidator` (re-checks saved items against the current room), `RoomMetrics` + `MetricsFormatter`, `LayoutStatusFormatter`, `ConfirmGate`.
-- **Saving:** automatic, one second after the last place, move, delete, undo or redo (so a burst of edits writes once), and when the app is paused or closed with a save pending; plus the Save button. Each save writes a temporary file, flushes it and swaps it in, so a crash mid-save cannot corrupt the previous layout.
-- **Loading:** once, automatically, after the room has loaded; and with the Load button. Items that no longer fit the current room (outside it, too close to a wall, or overlapping an earlier item) are skipped and the measurements panel says how many. Loading does not rewrite the file, so skipped items stay saved until the next save. Loading and Clear All start a fresh undo history.
-- **Clear All:** empties the room and deletes the file.
-- **Measurements:** recomputed only when something changes (never per frame): room width and depth, floor area (exact outline), used area (sum of item footprints), free area (never below 0) and item count, rounded to 0.1.
+- **Two files** in `Application.persistentDataPath` (on the Quest, the app's own data folder; in the Editor, `%USERPROFILE%\AppData\LocalLow\<company>\room-planner-mr`):
+  - `layout.json`, the **session**: written by autosave and resumed at startup.
+  - `checkpoint.json`, the **saved version**: written only by Save and read only by Load.
+- **Format:** indented JSON with a `version` and one line per item (`id`, `definitionId`, `posX`, `posZ`, `yawDegrees`), in the room's own floor frame so the layout follows the room.
+- **Safe writes:** each write goes to a temp file, is flushed and then swapped in, so a crash mid-save cannot corrupt the previous file.
+- **Re-validation:** whatever is loaded is re-checked against the current room. Items that no longer fit are skipped and counted in the status message.
+- **History:** Load starts a fresh undo history and is then autosaved as the new session.
 
 ## How to open and run
 
@@ -79,28 +65,43 @@ While the controller ray is over the catalog, the right-hand buttons operate the
 2. Clone this repo and open it as a Unity project (`Open` → select the repo root).
 3. Let Unity resolve packages on first open.
 4. **Edit Mode tests**: `Window > General > Test Runner` → `EditMode` tab → `Run All`.
-5. **Play Mode (no headset)**: open `Assets/Project/Scenes/01_RoomPlanner.unity` and press Play. With no XR runtime the loader falls back to MRUK's sample room `Bedroom00` (Room Index on the `Managers/MRUK` object; set it to `-1` for a random sample room).
-   - **Meta XR Simulator**: `Window > Meta > Meta XR Simulator > Activate`, then Play. The room comes from the Simulator's environment.
-   - **Quest Link**: with *Spatial Data over Meta Quest Link* enabled in the Link app, Play loads the room you scanned on the headset.
+5. **Play Mode (no headset)**: open `Assets/Project/Scenes/01_RoomPlanner.unity` and press Play. With no XR runtime, the loader falls back to MRUK's sample room `Bedroom00` (Room Index on the `Managers/MRUK` object; set it to `-1` for a random sample room).
+   - **Quest Link**: with *Spatial Data over Meta Quest Link* enabled in the Link app, Play loads the room you scanned on the headset. Placement needs the Touch controllers, so use Link (there is no mouse fallback).
    - **Failure path**: on `Managers/RoomLoader`, untick *Use Device Data In Editor* and *Use Prefab Fallback In Editor*, then Play. The panel shows the "No room found" message.
-   - **Placement**: needs a right Touch controller, so use Quest Link. The Meta XR Simulator's input emulation may also work but has not been tried. There is no mouse fallback in this project.
-6. **On-device**: switch to the `Meta Quest` Build Profile (already set as active) and Build & Run with a Quest 3S connected over USB/ADB, developer mode enabled. Run Space Setup on the headset first.
+6. **On-device**: switch to the `Meta Quest` Build Profile and Build & Run with a Quest 3S connected over USB (developer mode on). Run Space Setup on the headset first.
 
 ## What is tested
 
-- Edit Mode (NUnit): the Core logic below.
-- Play Mode in the Editor: MRUK sample room prefabs, the Meta XR Simulator, a real Space Setup room over Quest Link, and the no-room failure path. Surfaces appear, the panel shows the right text, no exceptions.
-- Placement in Play Mode (MRUK rooms `Bedroom00` and `OtherRoom04_empty`, and a real room over Quest Link): all five items placed; items through a wall, too close to a wall, in corners, in an L-shaped cut-out, over an inner corner and on top of other furniture are rejected with the right reason; placed prefabs land exactly on the validated footprint. These runs aimed the ghost with a scripted ray and called the place/rotate/select methods directly, because no one was holding the controllers.
-- Editing in Play Mode (a real room over Quest Link, and MRUK rooms `Bedroom00` and `OtherRoom04_empty`): place three items, pick one up, try to drop it into a wall (rejected, still held), drop it somewhere valid, delete it with B, undo the delete (same Id comes back), undo the move, redo it. Also grip-cancel, B while holding, and grip while placing. Driven by a scripted ray and by invoking the input component's events, not by pressing real buttons.
-- On the headset (my own test after Phase 3B): placing, moving, deleting and undo work with the real controllers.
-- Save/load in Play Mode (a real room over Quest Link, and MRUK rooms `Bedroom00` and `OtherRoom04_empty`): placed items autosave about a second after an edit; after stopping and starting Play Mode they come back with the same ids at exactly the same spots; a layout saved in one room and loaded into a smaller sample room places what fits and reports the rest ("Loaded 1 item. 3 did not fit this room."); loading does not change the file; the Save button, Clear All (first press arms, second within 3 s clears the room and deletes the file, a late press only re-arms) and Load with no file work; unknown furniture in a hand-edited file is dropped and reported. The measurements panel matched the placed items each time. Buttons were clicked through their `onClick`, not with the controller ray.
-- **Not yet tested by hand**: the new Save / Load / Clear All buttons with the controller ray.
-- **Not yet tested as a standalone build on the headset**: the save file in `persistentDataPath` on the Quest (writing, surviving an app restart, the temp-file swap on Android), autosave when the headset is taken off (app pause), the runtime permission prompt (accept and deny), loading Space Setup data without Link, and frame rate with the Interaction SDK rig.
+- **Edit Mode:** 187 NUnit tests, all passing (see below).
+- **Play Mode in the Editor:** MRUK sample rooms (`Bedroom00`, `OtherRoom04_empty`), the Meta XR Simulator, a real Space Setup room over Quest Link, and the no-room failure path.
+  - **Placement and editing:** all five items; rejections for walls, wall margin, corners, L-shaped cut-outs and overlaps; pick up, move, drop, put back, delete, undo/redo.
+  - **Saving:**
+    - Autosave, then a Play Mode restart resumes the session.
+    - Save, then move an item, then Load returns the saved version.
+    - Clear All, then Load brings the saved version back; Clear All keeps `checkpoint.json`.
+    - Load with no saved version says "No saved layout yet." and leaves the floor alone.
+    - A restart resumes the session, not the saved version.
+  - **Panels:** the status line fades after about 4 s while the hint stays; the hint goes on the first placement; the panels sit at eye level.
+  - **How these were driven:** a scripted ray plus direct calls to the input events and button methods, not physical buttons.
+- **On the headset (my own tests):** passthrough (Phase 1); placing, moving, deleting and undo with the real controllers (Phase 3B); the Phase 4 save/load build.
+- **Needs a standalone headset build to confirm:**
+  - The two-file save/load on the Quest's storage, including the restart and pause cases.
+  - The controller ray on the catalog now that the hand interactors are off.
+  - That the eye-level panels clear real furniture at real head height (in the Editor the head sits at floor level).
+  - The permission prompt.
+  - Frame rate against the 72 FPS target, which has not been measured yet.
 
 ## Tests
 
-154 NUnit Edit Mode tests, all passing: furniture catalog and labels, item ids, `OverlapChecker` (separate, overlapping, touching, rotated 45°, one inside another, walls), `PlacementValidator` (every reason, margins, corners, L- and U-shaped rooms, slanted walls, moves excluding themselves), `RayVsOrientedBox` (hit, miss, rotated, nearest of several), `PlacementHistory` (undo/redo order, redo cleared, 50-entry cap, exact move poses, delete restoring the same Id, clear), `LayoutSerializer` (exact round-trip of 0, 1 and many items, version field, unknown and invalid items dropped, empty/malformed/wrong-version files), `LayoutRevalidator`, `RoomMetrics` and `MetricsFormatter` (rectangular and L-shaped rooms, free area never negative), `LayoutStatusFormatter`, `ConfirmGate`, `FloorRay`, `YawStepper`, `GridSnapper`, `AxisStepDetector`, `FloorFrame`, `RoomFootprint` and `RoomStatusFormatter`. Run via the Test Runner as above.
+187 NUnit Edit Mode tests, all passing:
+
+- **Placement:** furniture catalog and labels, item ids, `OverlapChecker`, `PlacementValidator` (every reason, margins, corners, L- and U-shaped rooms, slanted walls, moves excluding themselves), `RayVsOrientedBox`, `GrabOffset`, `PlacementHistory`.
+- **Saving:** `LayoutSerializer` (exact round-trip, unknown and invalid items, empty/malformed/wrong-version files), `LayoutRevalidator`, `LayoutSlots` (session vs saved version are independent, Load returns the saved version, Clear All keeps it, none saved, unreadable file, re-validation, write failure).
+- **Measurements and UI logic:** `RoomMetrics` and formatters, `OnboardingHint`, `StatusFade`, `ConfirmGate`.
+- **Geometry and input:** `FloorRay`, `YawStepper`, `GridSnapper`, `AxisStepDetector`, `FloorFrame`, `RoomFootprint`, `RoomStatusFormatter`.
+
+Run them through the Test Runner as above.
 
 ## AI-use note
 
-This project is built with [Claude Code](https://claude.com/claude-code) as a coding assistant — writing C# against my specs, wiring up Unity Editor/Meta SDK settings, and running tests. I design the architecture, review and integrate every change, and do all testing (Editor, simulator, and on-device where noted). Nothing here ships without me having read and understood it.
+This project is built with [Claude Code](https://claude.com/claude-code) as a coding assistant: writing C# against my specs, wiring up Unity Editor/Meta SDK settings, and running tests. I design the architecture, review and integrate every change, and do all testing (Editor, simulator, and on-device where noted). Nothing here ships without me having read and understood it.
