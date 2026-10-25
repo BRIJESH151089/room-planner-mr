@@ -8,15 +8,23 @@ namespace RoomPlanner.Placement
     // After the room has loaded successfully (RoomLoader.RoomLoaded -> OnRoomLoaded) it loads the saved layout once,
     // re-checked against the current room: items that no longer fit are skipped and counted in the status message.
     // The file is not rewritten by loading, so skipped items stay in it until the next save.
+    // Saving: automatically autosaveDelaySeconds after the last edit (PlacementController.LayoutEdited -> OnLayoutEdited),
+    // so a burst of edits writes once, plus when the app is paused or quits with a save pending; and on demand
+    // from the Save button (SaveNow). Clear All (ClearAll) empties the layout and deletes the file.
     // StatusChanged carries short messages from LayoutStatusFormatter for the measurements panel.
     public class LayoutPersistence : MonoBehaviour
     {
         [SerializeField] private PlacementController placement;
         [SerializeField] private LayoutStore store;
+        [SerializeField] private float autosaveDelaySeconds = 1f;
         [SerializeField] private UnityEvent<string> statusChanged = new UnityEvent<string>();
 
         private bool autoLoadPending;
         private bool autoLoadDone;
+        private bool savePending;
+        private float saveDueTime;
+
+        public bool IsSavePending => savePending;
 
         public UnityEvent<string> StatusChanged => statusChanged;
         public string LastStatus { get; private set; }
@@ -29,13 +37,47 @@ namespace RoomPlanner.Placement
             }
         }
 
-        // Loads the saved layout, replacing what is placed now.
+        public void OnLayoutEdited()
+        {
+            savePending = true;
+            saveDueTime = Time.unscaledTime + autosaveDelaySeconds;
+        }
+
+        public void SaveNow()
+        {
+            if (!placement.IsRoomReady)
+            {
+                return;
+            }
+
+            savePending = false;
+            Report(store.Save(placement.PlacedItems)
+                ? LayoutStatusFormatter.Saved(placement.PlacedItems.Count)
+                : LayoutStatusFormatter.SaveFailedText);
+        }
+
+        public void ClearAll()
+        {
+            if (!placement.IsRoomReady)
+            {
+                return;
+            }
+
+            savePending = false;
+            placement.ClearAll();
+            store.Clear();
+            Report(LayoutStatusFormatter.ClearedText);
+        }
+
+        // Loads the saved layout, replacing what is placed now (unsaved edits are discarded).
         public void LoadFromDisk()
         {
             if (!placement.IsRoomReady)
             {
                 return;
             }
+
+            savePending = false;
 
             if (!store.TryLoad(out LayoutLoadResult result))
             {
@@ -67,6 +109,28 @@ namespace RoomPlanner.Placement
                 autoLoadPending = false;
                 autoLoadDone = true;
                 LoadFromDisk();
+            }
+
+            if (savePending && Time.unscaledTime >= saveDueTime)
+            {
+                SaveNow();
+            }
+        }
+
+        // Quest apps are paused when the headset is taken off or the user goes Home; save what is pending then.
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused && savePending)
+            {
+                SaveNow();
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (savePending)
+            {
+                SaveNow();
             }
         }
 

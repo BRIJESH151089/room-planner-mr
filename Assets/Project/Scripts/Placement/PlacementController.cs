@@ -26,6 +26,9 @@ namespace RoomPlanner.Placement
         [Tooltip("Raised when placing is cancelled with the grip, so the catalog can clear its highlight.")]
         [SerializeField] private UnityEvent placingCancelled = new UnityEvent();
 
+        [Tooltip("Raised after every place, move, delete, undo and redo (not after loading or clearing a whole layout).")]
+        [SerializeField] private UnityEvent layoutEdited = new UnityEvent();
+
         private readonly List<PlacedItem> placedItems = new List<PlacedItem>();
         private readonly Dictionary<string, GameObject> instances = new Dictionary<string, GameObject>();
         private PlacementHistory history;
@@ -46,6 +49,7 @@ namespace RoomPlanner.Placement
         public bool IsMoving => movingId != null;
         public string MovingId => movingId;
         public UnityEvent PlacingCancelled => placingCancelled;
+        public UnityEvent LayoutEdited => layoutEdited;
 
         private void Awake()
         {
@@ -143,7 +147,7 @@ namespace RoomPlanner.Placement
                 EndMove();
             }
 
-            ApplyChange(history.Remove(id));
+            ApplyEdit(history.Remove(id));
         }
 
         // X: undo the last place, move or delete. While an item is held, X only puts it back (cancels the move).
@@ -157,7 +161,7 @@ namespace RoomPlanner.Placement
 
             if (history.TryUndo(out LayoutChange change))
             {
-                ApplyChange(change);
+                ApplyEdit(change);
             }
         }
 
@@ -166,7 +170,7 @@ namespace RoomPlanner.Placement
         {
             if (!IsMoving && history.TryRedo(out LayoutChange change))
             {
-                ApplyChange(change);
+                ApplyEdit(change);
             }
         }
 
@@ -177,7 +181,7 @@ namespace RoomPlanner.Placement
                 return false;
             }
 
-            ApplyChange(history.Place(ghost.Candidate.WithId(PlacedItem.NewId())));
+            ApplyEdit(history.Place(ghost.Candidate.WithId(PlacedItem.NewId())));
             return true;
         }
 
@@ -211,7 +215,7 @@ namespace RoomPlanner.Placement
             // Dropping exactly where it was is not an edit worth an undo step.
             if (target.X != movingOriginal.X || target.Z != movingOriginal.Z || target.YawDegrees != movingOriginal.YawDegrees)
             {
-                ApplyChange(history.Move(id, target.X, target.Z, target.YawDegrees));
+                ApplyEdit(history.Move(id, target.X, target.Z, target.YawDegrees));
             }
 
             return true;
@@ -268,6 +272,12 @@ namespace RoomPlanner.Placement
 
             movingId = null;
             ghost.Hide();
+        }
+
+        private void ApplyEdit(LayoutChange change)
+        {
+            ApplyChange(change);
+            layoutEdited.Invoke();
         }
 
         private void ApplyChange(LayoutChange change)

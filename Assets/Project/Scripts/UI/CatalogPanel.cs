@@ -38,10 +38,28 @@ namespace RoomPlanner.UI
         [Tooltip("Raised when the user clicks the selected item again to deselect it.")]
         [SerializeField] private UnityEvent selectionCleared = new UnityEvent();
 
+        [Header("Layout buttons")]
+        [SerializeField] private Button saveButton;
+        [SerializeField] private Button loadButton;
+        [SerializeField] private Button clearAllButton;
+        [SerializeField] private Text clearAllLabel;
+        [SerializeField] private string clearAllText = "Clear All";
+        [SerializeField] private string clearAllConfirmText = "Confirm?";
+        [SerializeField] private UnityEvent saveClicked = new UnityEvent();
+        [SerializeField] private UnityEvent loadClicked = new UnityEvent();
+
+        [Tooltip("Raised on the second Clear All press within 3 seconds.")]
+        [SerializeField] private UnityEvent clearAllConfirmed = new UnityEvent();
+
+        private readonly ConfirmGate clearAllGate = new ConfirmGate();
+        private bool showingConfirm;
         private int selectedIndex = -1;
 
         public UnityEvent<string> ItemSelected => itemSelected;
         public UnityEvent SelectionCleared => selectionCleared;
+        public UnityEvent SaveClicked => saveClicked;
+        public UnityEvent LoadClicked => loadClicked;
+        public UnityEvent ClearAllConfirmed => clearAllConfirmed;
         public bool IsShown => panelRoot != null && panelRoot.activeSelf;
 
         private void Awake()
@@ -71,10 +89,45 @@ namespace RoomPlanner.UI
                 buttons[i].onClick.AddListener(() => SelectIndex(index));
             }
 
+            if (saveButton != null)
+            {
+                saveButton.onClick.AddListener(saveClicked.Invoke);
+            }
+
+            if (loadButton != null)
+            {
+                loadButton.onClick.AddListener(loadClicked.Invoke);
+            }
+
+            if (clearAllButton != null)
+            {
+                clearAllButton.onClick.AddListener(PressClearAll);
+            }
+
             ApplyHighlight();
             if (panelRoot != null)
             {
                 panelRoot.SetActive(false);
+            }
+        }
+
+        // First press turns the label into "Confirm?"; a second press within 3 seconds raises ClearAllConfirmed.
+        public void PressClearAll()
+        {
+            bool confirmed = clearAllGate.Press(Time.unscaledTime);
+            SetClearAllConfirm(!confirmed);
+            if (confirmed)
+            {
+                clearAllConfirmed.Invoke();
+            }
+        }
+
+        private void SetClearAllConfirm(bool confirm)
+        {
+            showingConfirm = confirm;
+            if (clearAllLabel != null)
+            {
+                clearAllLabel.text = confirm ? clearAllConfirmText : clearAllText;
             }
         }
 
@@ -127,6 +180,12 @@ namespace RoomPlanner.UI
 
         private void LateUpdate()
         {
+            // The label only changes when the confirm window runs out, so no per-frame string work.
+            if (showingConfirm && !clearAllGate.IsArmed(Time.unscaledTime))
+            {
+                SetClearAllConfirm(false);
+            }
+
             if (!IsShown || head == null)
             {
                 return;
