@@ -35,9 +35,13 @@ namespace RoomPlanner.UI
 
         [SerializeField] private UnityEvent<string> itemSelected = new UnityEvent<string>();
 
+        [Tooltip("Raised when the user clicks the selected item again to deselect it.")]
+        [SerializeField] private UnityEvent selectionCleared = new UnityEvent();
+
         private int selectedIndex = -1;
 
         public UnityEvent<string> ItemSelected => itemSelected;
+        public UnityEvent SelectionCleared => selectionCleared;
         public bool IsShown => panelRoot != null && panelRoot.activeSelf;
 
         private void Awake()
@@ -93,9 +97,24 @@ namespace RoomPlanner.UI
                 return;
             }
 
+            // Clicking the selected item again deselects it, which switches back to picking up placed furniture.
+            if (index == selectedIndex)
+            {
+                ClearSelection();
+                selectionCleared.Invoke();
+                return;
+            }
+
             selectedIndex = index;
             ApplyHighlight();
             itemSelected.Invoke(items[index].Id);
+        }
+
+        // Clears the highlight only; called from placement when placing is cancelled elsewhere.
+        public void ClearSelection()
+        {
+            selectedIndex = -1;
+            ApplyHighlight();
         }
 
         private void ApplyHighlight()
