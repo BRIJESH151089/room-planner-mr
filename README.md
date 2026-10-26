@@ -4,6 +4,8 @@ A mixed-reality app for Meta Quest 3S. You see your real room through passthroug
 
 Solo portfolio project. Design, integration and testing by me; built with [Claude Code](https://claude.com/claude-code) assistance.
 
+**Demo video:** https://youtu.be/DktR8WYW8kM
+
 ## Goal
 
 Walk around your actual room in passthrough, drop in virtual furniture, and see how it fits before you buy or move anything. Placement is validated against the real room's floor outline so items can't end up floating or clipping through walls.
