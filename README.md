@@ -4,7 +4,9 @@ A mixed-reality app for Meta Quest 3S. You see your real room through passthroug
 
 Solo portfolio project. Design, integration and testing by me; built with [Claude Code](https://claude.com/claude-code) assistance.
 
-**Demo video:** https://youtu.be/DktR8WYW8kM
+[![YouTube - Watch the demo](https://img.shields.io/badge/YouTube-Watch%20the%20demo-red?logo=youtube&logoColor=white)](https://youtu.be/DktR8WYW8kM)
+
+[![Room Planner (MR) demo](Docs/images/demo.jpg)](https://youtu.be/DktR8WYW8kM)
 
 ## Goal
 
